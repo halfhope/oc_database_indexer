@@ -8,3 +8,7 @@
 * feature: Added the ability to enter connection data manually
 * feature: Added addditional indexes
 
+#### 1.3
+
+* refactor: Minor refactoring
+
