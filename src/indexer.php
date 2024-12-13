@@ -7,31 +7,26 @@ if (!isset($_COOKIE['l5traS']) || $_COOKIE['l5traS'] !== $password){
 	die("<html><head><script>var pwd=prompt('Enter password','');document.cookie='l5traS='+encodeURIComponent(pwd);location.reload();</script></head></html>");
 }
 
-$_version = "1.2";
+$_version = "1.3";
+
+$sc_config = './config.php';
 
 // Mysqli DB driver
 final class MySQLiz
 
 {
 	private $mysqli_handler;
-	public
-
-	function __construct($hostname, $username, $password, $database)
-	{
+	public function __construct($hostname, $username, $password, $database) {
 		$this->mysqli_handler = new mysqli($hostname, $username, $password, $database);
 		if ($this->mysqli_handler->connect_error) {
 			trigger_error('Error: Could not make a database link (' . $this->mysqli_handler->connect_errno . ') ' . $this->mysqli_handler->connect_error);
 		}
-
 		$this->mysqli_handler->query("SET NAMES 'utf8'");
 		$this->mysqli_handler->query("SET CHARACTER SET utf8");
 		$this->mysqli_handler->query("SET CHARACTER_SET_CONNECTION=utf8");
 	}
 
-	public
-
-	function query($sql)
-	{
+	public function query($sql) {
 		$result = $this->mysqli_handler->query($sql, MYSQLI_STORE_RESULT);
 		if ($result !== FALSE) {
 			if (is_object($result)) {
@@ -41,7 +36,6 @@ final class MySQLiz
 					$data[$i] = $row;
 					$i++;
 				}
-
 				$result->close();
 				$query = new stdClass();
 				$query->row = isset($data[0]) ? $data[0] : array();
@@ -49,42 +43,28 @@ final class MySQLiz
 				$query->num_rows = count($data);
 				unset($data);
 				return $query;
-			}
-			else {
+			} else {
 				return true;
 			}
-		}
-		else {
+		} else {
 			trigger_error('Error: ' . $this->mysqli_handler->error . '<br />Error No: ' . $this->mysqli_handler->errno . '<br />' . $sql);
 			exit();
 		}
 	}
 
-	public
-
-	function escape($value)
-	{
+	public function escape($value) {
 		return $this->mysqli_handler->real_escape_string($value);
 	}
 
-	public
-
-	function countAffected()
-	{
+	public function countAffected() {
 		return $this->mysqli_handler->affected_rows;
 	}
 
-	public
-
-	function getLastId()
-	{
+	public function getLastId() {
 		return $this->mysqli_handler->insert_id;
 	}
 
-	public
-
-	function __destruct()
-	{
+	public function __destruct() {
 		$this->mysqli_handler->close();
 	}
 }
@@ -105,6 +85,9 @@ $exists_index 			= array();
 $excluded_index 		= array();
 
 $non_exists_indexes 	= array(
+	'order_product' => array(
+		'order_id' => 'order_id'
+	) ,
 	'product_attribute' => array(
 		'attribute_id' => 'attribute_id',
 		'language_id' => 'language_id'
@@ -147,28 +130,29 @@ $non_exists_indexes 	= array(
 	) ,
 	'url_alias' => array(
 		'query' => 'query'
+	),
+	'session' => array(
+		'expire' => 'expire'
 	)
 );
 
 // Connect to DB
 
-if (file_exists('./config.php')) {
-	require_once "./config.php";
-
+if (file_exists($sc_config)) {
+	require_once $sc_config;
 	$db = new MySQLiz(DB_HOSTNAME, DB_USERNAME, DB_PASSWORD, DB_DATABASE);
 	$db_name = DB_DATABASE;
-} else {
-	if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username'])) {
-		define('DB_PREFIX', $_POST['db_prefix']);
-		if (isset($_POST['hostaname'])) {
-			$hostname = 'localhost';
-		} else {
-			$hostname = $_POST['hostaname'];
-		}
-
-		$db = new MySQLiz($hostaname, $_POST['username'], $_POST['password'], $_POST['database']);
-		$db_name = $_POST['database'];
+} elseif ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['username'])) {	
+	define('DB_PREFIX', $_POST['db_prefix']);
+	if (isset($_POST['hostaname'])) {
+		$hostname = 'localhost';
+	} else {
+		$hostname = $_POST['hostaname'];
 	}
+	$db = new MySQLiz($hostaname, $_POST['username'], $_POST['password'], $_POST['database']);
+	$db_name = $_POST['database'];
+} else {
+	// die('Can\'t load config file');
 }
 
 // run optimization 
@@ -201,7 +185,7 @@ if ($db_name !== false) {
 	foreach($non_exists_indexes as $table_name => $table_data) {
 		foreach($table_data as $index_name => $index_data) {
 			$check = $db->query("SELECT * FROM information_schema.COLUMNS WHERE 
-				    TABLE_SCHEMA = '$db_name' 
+				TABLE_SCHEMA = '$db_name' 
 				AND TABLE_NAME = '" . DB_PREFIX . "$table_name' 
 				AND COLUMN_NAME = '$index_name'");
 			if ($check->num_rows) {
@@ -239,9 +223,9 @@ header('Content-Type: text/html; charset=utf-8');
 		<meta charset="utf-8">
 	    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 	    <meta name="author" content="halfhope">
-		<title>OpenCart Database Indexer v<?php echo $_version ?></title>
-<link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+		<title>OpenCart Database indexer v<?php echo $_version ?></title>
+		<link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
 <style>
 html{
 	overflow-y: scroll;
@@ -408,7 +392,7 @@ body {
 
     <div class="container">
 	<header class="header clearfix">
-		<h3 class="text-muted"><a href="<?php echo $_SERVER['REQUEST_URI']; ?>">OpenCart Database Indexer v<?php echo $_version ?></a></h3>
+		<h3 class="text-muted"><a href="<?php echo $_SERVER['REQUEST_URI']; ?>">OpenCart Database indexer v<?php echo $_version ?></a></h3>
 	</header>
 
 	<main role="main">
@@ -422,23 +406,23 @@ body {
 					<label for="hostaname" for="hostaname">Server</label>
 				</div>
 				<div class="form-label-group">
-					<input class="form-control" type="text" name="username" id="username" placeholder="User name" value="<?php echo $username; ?>" required>
-					<label for="username" for="username">User name</label>
+					<input class="form-control" type="text" name="username" id="username" placeholder="Username" value="<?php echo $username; ?>" required>
+					<label for="username" for="username">Username</label>
 				</div>
 				<div class="form-label-group">
 					<input class="form-control" type="text" name="password" id="password" placeholder="Password" value="<?php echo $password; ?>">
 					<label for="password" for="password">Password</label>
 				</div>
 				<div class="form-label-group">
-					<input class="form-control" type="text" name="database" id="database" placeholder="Database" value="<?php echo $database; ?>" required>
-					<label for="database" for="database">Database</label>
+					<input class="form-control" type="text" name="database" id="database" placeholder="Database name" value="<?php echo $database; ?>" required>
+					<label for="database" for="database">Database name</label>
 				</div>
 				<div class="form-label-group">
-					<input class="form-control" type="text" name="db_prefix" id="db_prefix" placeholder="Tables prefix" value="<?php echo $db_prefix; ?>">
-					<label for="db_prefix" for="db_prefix">Tables prefix</label>
+					<input class="form-control" type="text" name="db_prefix" id="db_prefix" placeholder="Prefix" value="<?php echo $db_prefix; ?>">
+					<label for="db_prefix" for="db_prefix">Prefix</label>
 				</div>
 
-				<button type="submit" class="btn btn-lg btn-primary btn-block">Run</button>
+				<button type="submit" class="btn btn-lg btn-primary btn-block">Optimize</button>
 			</form>
 		</div>
 		</div>
@@ -489,7 +473,7 @@ body {
 			</table>
 		<?php endif ?>
 		<?php if (!empty($excluded_index) && $db_name): ?>
-			<h3>Исключения</h3>
+			<h3>Excluded</h3>
 			<p>Excluded due to lack of required fields (difference in OpenCart versions).</p>
 			<table class="table table-sm">
 				<thead>
@@ -526,7 +510,7 @@ body {
 
 	</main>
 	<footer class="footer">
-		<div class="copyright">&copy; By <a href="http://shtt.blog/" target="_blank">halfhope</a> <?php echo date('Y'); ?></div> 
+		<div class="copyright">&copy; By <a href="http://shtt.blog/" target="_blank">halfhope</a> <?php echo date('Y'); ?></div>
 	</footer>
 	</div> <!-- /container -->
 </body>
